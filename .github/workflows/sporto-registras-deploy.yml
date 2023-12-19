@@ -70,6 +70,14 @@ jobs:
       - name: Generate repository name
         run: echo "REPOSITORY_NAME=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_ENV"
 
+      - name: Get Token
+        id: get_workflow_token
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ secrets.SPORTO_REGISTRAS_TRIGGER_DEPLOY_APPLICATION_ID }}
+          application_private_key: ${{ secrets.SPORTO_REGISTRAS_TRIGGER_DEPLOY_APPLICATION_PRIVATE_KEY }}
+          organization: ${{secrets.SPORTO_REGISTRAS_TRIGGER_DEPLOY_ORGANIZATION}}
+
       - name: Build, tag and push Docker image
         id: docker
         uses: AplinkosMinisterija/reusable-workflows/.github/actions/docker-build-tag-push@main
@@ -84,3 +92,12 @@ jobs:
             ${{inputs.build-args}}
           docker-context: ${{inputs.docker-context}}
           docker-platforms: ${{inputs.docker-platforms}}
+
+      - name: Trigger deploy
+        uses: convictional/trigger-workflow-and-wait@v1.6.5
+        with:
+          owner: ${{secrets.SPORTO_REGISTRAS_TRIGGER_DEPLOY_ORGANIZATION}}
+          repo: ${{secrets.SPORTO_REGISTRAS_TRIGGER_DEPLOY_REPOSITORY}}
+          github_token: ${{ steps.get_workflow_token.outputs.token }}
+          workflow_file_name: ${{secrets.SPORTO_REGISTRAS_TRIGGER_DEPLOY_WORKFLOW_FILE_NAME}}
+          client_payload: '{"environment": "${{inputs.environment}}"}'
